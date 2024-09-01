@@ -111,9 +111,16 @@
             }
 
             const stayProb = cars / doors;
-            const switchProb = (cars / doors) * ((cars - 1) / (doors - 2)) + 
-                               ((doors - cars) / doors) * (cars / (doors - 2));
-            
+            let switchProb = 0;
+
+            if (doors > 3) {
+                switchProb = (cars / doors) * ((cars - 1) / (doors - 2)) + 
+                             ((doors - cars) / doors) * (cars / (doors - 2));
+            } else {
+                switchProb = (cars / doors) * ((cars - 1) / (doors - 2)) + 
+                             ((doors - cars) / doors) * (cars / (doors - 2));
+            }
+
             const results = document.getElementById('results');
             results.innerHTML = `
                 <h2>결과</h2>
