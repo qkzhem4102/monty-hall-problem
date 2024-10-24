@@ -12,20 +12,24 @@
             padding: 20px;
             line-height: 1.6;
         }
+
         h1 {
             text-align: center;
             color: #333;
         }
+
         #game {
             background-color: #f0f0f0;
             padding: 20px;
             border-radius: 5px;
         }
+
         input[type="number"] {
             width: 100%;
             padding: 5px;
             margin-bottom: 10px;
         }
+
         button {
             background-color: #3DFCFF;
             color: black;
@@ -34,20 +38,25 @@
             border-radius: 4px;
             cursor: pointer;
         }
+
         button:hover {
             background-color: #2AEBED;
         }
+
         #results {
             margin-top: 20px;
         }
-        #reset, #close {
-            display: none;
-        }
+
         .explain {
             background-color: #e9f7ef;
             padding: 15px;
             border-radius: 5px;
             margin-top: 15px;
+        }
+
+        .error {
+            color: red;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -65,122 +74,141 @@
     </div>
 
     <script>
-        const MAX = Number.MAX_SAFE_INTEGER;
-
         function checkNum(val) {
             const num = parseInt(val);
-            if (isNaN(num) || num <= 0) {
-                return [false, "0 또는 음수는 허용되지 않습니다. 양의 정수를 입력해주세요."];
-            }
-            if (num > MAX) {
-                return [false, `입력된 수가 너무 큽니다. ${MAX} 이하의 수를 입력해주세요.`];
-            }
-            if (parseFloat(val) !== num) {
+            if (isNaN(num)) {
                 return [false, "정수를 입력해주세요."];
+            }
+            if (num <= 0) {
+                return [false, "0 또는 음수는 허용되지 않습니다. 양의 정수를 입력해주세요."];
             }
             return [true, num];
         }
 
-        function calcProb() {
-            const doorInp = document.getElementById('doors').value;
-            const carInp = document.getElementById('cars').value;
-
-            let [validDoors, doorRes] = checkNum(doorInp);
-            if (!validDoors) {
-                alert(doorRes);
-                return;
-            }
-
-            let [validCars, carRes] = checkNum(carInp);
-            if (!validCars) {
-                alert(carRes);
-                return;
-            }
-
-            const doors = doorRes;
-            const cars = carRes;
-
+        function calculateProbabilities(doors, cars) {
             if (doors < 3) {
-                alert("문의 개수는 3 이상이어야 합니다.");
-                return;
+                return {"error": "문의 개수는 3 이상이어야 합니다."};
             }
-
+            
             if (cars >= doors) {
-                alert("자동차의 개수는 문의 개수보다 적어야 합니다.");
+                return {"error": "자동차의 개수는 문의 개수보다 적어야 합니다."};
+            }
+            
+            const stayProb = (cars / doors) * (1 / (doors - cars)) / (1 / (doors - cars));
+            let switchProb;
+            let explanation;
+            
+            if (cars === doors - 1) {
+                switchProb = 1.0;
+                explanation = {
+                    type: "special",
+                    message: "자동차의 개수가 문의 개수보다 1개 적을 때는 선택을 바꾸면 항상 자동차를 얻을 수 있습니다."
+                };
+            } else {
+                switchProb = ((doors - cars) / doors) * (cars / (doors - 2)) + 
+                           (cars / doors) * ((cars - 1) / (doors - 2));
+                
+                explanation = {
+                    type: "normal",
+                    initial_car_prob: cars / doors,
+                    switch_prob: switchProb,
+                    details: {
+                        doors: doors,
+                        cars: cars,
+                        goats: doors - cars,
+                        remaining_doors: doors - 2,
+                        remaining_cars_if_car_selected: cars - 1,
+                        remaining_cars_if_goat_selected: cars
+                    }
+                };
+            }
+            
+            return {
+                success: true,
+                doors: doors,
+                cars: cars,
+                goats: doors - cars,
+                stay_probability: stayProb * 100,
+                switch_probability: switchProb * 100,
+                explanation: explanation
+            };
+        }
+
+        function calcProb() {
+            const doors = document.getElementById('doors').value;
+            const cars = document.getElementById('cars').value;
+
+            const [validDoors, doorResult] = checkNum(doors);
+            if (!validDoors) {
+                alert(doorResult);
                 return;
             }
 
-            let stayProb = cars / doors;
-            let switchProb;
-
-            // 특수한 경우: 자동차의 개수가 문의 개수보다 1개 적은 경우
-            if (cars === doors - 1) {
-                switchProb = 1.0; // 승률 100%
-            } else {
-                switchProb = (cars / doors) * ((cars - 1) / (doors - 2)) + 
-                             ((doors - cars) / doors) * (cars / (doors - 2));
+            const [validCars, carResult] = checkNum(cars);
+            if (!validCars) {
+                alert(carResult);
+                return;
             }
 
+            const result = calculateProbabilities(doorResult, carResult);
+            if (result.error) {
+                alert(result.error);
+                return;
+            }
+
+            displayResults(result);
+        }
+
+        function displayResults(data) {
             const results = document.getElementById('results');
+            let explanationHtml = '';
+
+            if (data.explanation.type === 'special') {
+                explanationHtml = `
+                    <div class="explain">
+                        <h3>특수한 경우</h3>
+                        <p>${data.explanation.message}</p>
+                    </div>
+                `;
+            } else {
+                const details = data.explanation.details;
+                explanationHtml = `
+                    <div class="explain">
+                        <h3>조건부 확률을 이용한 설명</h3>
+                        <p>   사건 A: 참가자가 염소가 있는 문을 고르는 사건</p>
+                        <p>   사건 B: 참가자가 자동차가 있는 문을 고르는 사건</p>
+                        <p>   사건 C: 참가자가 선택을 바꾸었을 때 자동차가 있는 문을 선택할 사건</p>
+                        <p>   라고 하자.</p>
+                        <p>1. 선택을 바꾸지 않았을 때 자동차가 뒤에 있는 문을 선택할 확률:</p>
+                        <p>   P(B|A) = P(B)P(A|B) / P(A)</p>
+                        <p>            = (${details.cars} / ${details.doors}) * (1/${details.goats}) / (1/${details.goats}) = ${(data.stay_probability/100).toFixed(6)}</p>
+                        <p>2. 선택을 바꾸었을 때 자동차가 뒤에 있는 문을 선택할 확률:</p>
+                        <p>   P(C) = P(C|A)P(A) + P(C|B)P(B)</p>
+                        <p>          = (${details.goats} / ${details.doors}) * (${details.remaining_cars_if_goat_selected} / ${details.remaining_doors}) + (${details.cars}/${details.doors}) * (${details.remaining_cars_if_car_selected} / ${details.remaining_doors})</p>
+                        <p>          = ${(data.switch_probability/100).toFixed(6)}</p>
+                    </div>
+                `;
+            }
+
             results.innerHTML = `
                 <h2>결과</h2>
-                <p>전체 문의 개수: ${doors}</p>
-                <p>자동차의 개수: ${cars}</p>
+                <p>전체 문의 개수: ${data.doors}</p>
+                <p>자동차의 개수: ${data.cars}</p>
                 <h3>조건부 확률을 이용한 계산</h3>
-                <p>선택을 바꾸지 않았을 때의 승률: ${(stayProb * 100).toFixed(6)}%</p>
-                <p>선택을 바꾸었을 때의 승률: ${(switchProb * 100).toFixed(6)}%</p>
-                ${explainCalc(doors, cars, stayProb, switchProb)}
+                <p>선택을 바꾸지 않았을 때의 승률: ${data.stay_probability.toFixed(6)}%</p>
+                <p>선택을 바꾸었을 때의 승률: ${data.switch_probability.toFixed(6)}%</p>
+                ${explanationHtml}
                 <div>
-                    <button onclick="reset()" id="reset">다시하기</button>
-                    <button onclick="close()" id="close">그만하기</button>
+                    <button onclick="reset()">다시하기</button>
                 </div>
             `;
 
             document.getElementById('input').style.display = 'none';
-            document.getElementById('reset').style.display = 'inline-block';
-            document.getElementById('close').style.display = 'inline-block';
-        }
-
-        function explainCalc(doors, cars, stayProb, switchProb) {
-            if (cars === doors - 1) {
-                return `
-                    <div class="explain">
-                        <h3>특수한 경우: 자동차의 개수가 문의 개수보다 1개 적을 때</h3>
-                        <p>이 경우, 선택을 바꾸면 항상 자동차를 얻을 수 있습니다.</p>
-                        <p>따라서 선택을 바꾸었을 때 승률은 100%입니다.</p>
-                    </div>
-                `;
-            } else {
-                return `
-                    <div class="explain">
-                        <h3>조건부 확률을 이용한 설명</h3>
-                        <p>1. 선택을 바꾸지 않았을 때의 승률:</p>
-                        <p>   P(선택한 문에 자동차가 있음) = ${cars}/${doors} = ${stayProb.toFixed(6)}</p>
-                        <p>2. 선택을 바꾸었을 때의 승률:</p>
-                        <p>   Case 1: 처음에 자동차를 선택한 경우 (확률: ${cars}/${doors})</p>
-                        <p>     - 이 경우, 바꾸면 항상 염소를 선택하게 됨</p>
-                        <p>     - 승률: (${cars}/${doors}) * ((${cars}-1)/(${doors}-2)) = ${((cars/doors) * ((cars-1)/(doors-2))).toFixed(6)}</p>
-                        <p>   Case 2: 처음에 염소를 선택한 경우 (확률: ${doors - cars}/${doors})</p>
-                        <p>     - 이 경우, 바꾸면 남은 자동차 중 하나를 선택하게 됨</p>
-                        <p>     - 승률: (${doors - cars}/${doors}) * (${cars}/(${doors}-2)) = ${(((doors-cars)/doors) * (cars/(doors-2))).toFixed(6)}</p>
-                        <p>   총 승률 = Case 1 + Case 2</p>
-                        <p>            = ${((cars/doors) * ((cars-1)/(doors-2))).toFixed(6)} + ${(((doors-cars)/doors) * (cars/(doors-2))).toFixed(6)}</p>
-                        <p>            = ${switchProb.toFixed(6)}</p>
-                        <p>따라서, 선택을 바꾸었을 때 자동차를 얻을 확률은 ${(switchProb * 100).toFixed(6)}%입니다.</p>
-                    </div>
-                `;
-            }
         }
 
         function reset() {
             document.getElementById('input').style.display = 'block';
             document.getElementById('results').innerHTML = '';
-            document.getElementById('reset').style.display = 'none';
-            document.getElementById('close').style.display = 'none';
-        }
-
-        function close() {
-            window.close();
         }
     </script>
 </body>
