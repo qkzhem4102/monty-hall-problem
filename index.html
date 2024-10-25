@@ -177,14 +177,14 @@
                         <h3>조건부 확률을 이용한 설명</h3>
                         <p>   사건 A: 참가자가 염소가 있는 문을 고르는 사건</p>
                         <p>   사건 B: 참가자가 자동차가 있는 문을 고르는 사건</p>
-                        <p>   사건 C: 참가자가 선택을 바꾸었을 때 자동차가 있는 문을 선택할 사건</p>
+                        <p>   사건 C: 참가자가 두 번째 선택에서 자동차가 있는 문을 선택할 사건</p>
                         <p>   라고 하자.</p>
                         <p>1. 선택을 바꾸지 않았을 때 자동차가 뒤에 있는 문을 선택할 확률:</p>
-                        <p>   P(B|A) = P(B)P(A|B) / P(A)</p>
-                        <p>            = (${details.cars} / ${details.doors}) * (1/${details.goats}) / (1/${details.goats}) = ${(data.stay_probability/100).toFixed(6)}</p>
+                        <p>   P(C) = P(C|A)P(A) + P(C|B)P(B)</p>
+                        <p>          = 0 * (${details.goats} / ${details.doors} + 1 * (${details.cars} / ${details.doors} = ${(data.stay_probability/100).toFixed(6)}</p>
                         <p>2. 선택을 바꾸었을 때 자동차가 뒤에 있는 문을 선택할 확률:</p>
                         <p>   P(C) = P(C|A)P(A) + P(C|B)P(B)</p>
-                        <p>          = (${details.goats} / ${details.doors}) * (${details.remaining_cars_if_goat_selected} / ${details.remaining_doors}) + (${details.cars}/${details.doors}) * (${details.remaining_cars_if_car_selected} / ${details.remaining_doors})</p>
+                        <p>          = (${details.remaining_cars_if_goat_selected} / ${details.remaining_doors}) * (${details.goats} / ${details.doors}) + (${details.remaining_cars_if_car_selected} / ${details.remaining_doors}) * (${details.cars}/${details.doors})</p>
                         <p>          = ${(data.switch_probability/100).toFixed(6)}</p>
                     </div>
                 `;
